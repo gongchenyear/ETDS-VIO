@@ -1,0 +1,28 @@
+%YAML:1.0
+
+# Camera calibration for Occipital Structure Core (color camera) on VCU-RVI Benchmark.
+# Source: rising-turtle/VINS-Fusion config/struct_core_cal_v2/cam0_pinhole.yaml
+#         (the same calibration used by VCU-RVI paper, IROS 2020).
+# Note: Structure Core SDK applies internal undistortion, so distortion
+#       coefficients are zero in the v2 calibration. Unlike D435i where the
+#       intrinsics are read from /d400/color/camera_info, VCU-RVI bags do not
+#       publish camera_info; this file is the canonical intrinsic source.
+
+model_type: PINHOLE
+camera_name: sc_color
+image_width: 640
+image_height: 480
+
+# Distortion parameters (k1, k2, p1, p2)
+distortion_parameters:
+   k1: 0.0
+   k2: 0.0
+   p1: 0.0
+   p2: 0.0
+
+# Projection parameters (fx, fy, cx, cy)
+projection_parameters:
+   fx: 459.357
+   fy: 459.764
+   cx: 332.695
+   cy: 258.998

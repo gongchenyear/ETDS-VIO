@@ -1,0 +1,24 @@
+%YAML:1.0
+
+model_type: PINHOLE
+camera_name: camera
+image_width: 1280
+image_height: 720
+
+# 畸变参数 - 从/rgb/camera_info获取
+# 原始畸变模型为rational_polynomial，这里简化为PINHOLE模型支持的参数
+distortion_parameters:
+   k1: 0.1438480019569397
+   k2: -2.7441837787628174
+   p1: 0.0013333731330931187
+   p2: -0.0001875377056421712
+
+# 投影参数 - 从/rgb/camera_info的K矩阵获取
+projection_parameters:
+   fx: 608.4476318359375
+   fy: 608.09130859375
+   cx: 639.1974487304688
+   cy: 365.27264404296875
+
+# 注意：Azure Kinect相机使用rational_polynomial畸变模型
+# VINS-Fusion使用PINHOLE模型，可能需要在实际运行中进行微调 

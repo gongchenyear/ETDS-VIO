@@ -1,0 +1,163 @@
+%YAML:1.0
+---
+# VCU-RVI Benchmark — Baseline configuration (all enhancement modules disabled).
+# Mirrors openloris/market_mono_imu_config.yaml in structure; only sensor-side
+# parameters and topics differ. Enhancement-module switches are kept here so
+# that the same binary can be reused; for strict "official VINS-Fusion" comparison
+# users should still run the separately-built VINS-Orig binary in parallel.
+
+#common parameters
+imu: 1
+num_of_cam: 1
+
+# Topics from VCU-RVI lab-dynamic rosbags (Occipital Structure Core).
+imu_topic: "/imu"
+image0_topic: "/cam0/color"
+depth0_topic: "/cam0/depth"
+
+# Output path for VINS results (mirror of OpenLORIS layout under VINS-Orig/).
+output_path: "/home/chen/full+drt/VINS-Orig/"
+
+# Camera calibration — Structure Core color, 640x480, zero distortion.
+cam0_calib: "sc_color_calib.yaml"
+image_width: 640
+image_height: 480
+
+# Extrinsic IMU<->camera, from Occipital SDK factory calibration
+# (rising-turtle/VINS-Fusion struct_core_cal_v2/struct_core_mono.yaml).
+# VCU-RVI paper Sec. III explicitly adopts the SDK factory matrix over Kalibr
+# because vernier-caliper verification showed it is more accurate.
+estimate_extrinsic: 0
+body_T_cam0: !!opencv-matrix # Timu2c_1 Tu2c
+   rows: 4
+   cols: 4
+   dt: d
+   data: [ 0.00193013, -0.999997,    0.00115338, -0.00817048,
+          -0.999996,   -0.0019327,  -0.00223606,  0.015075,
+           0.00223829, -0.00114906, -0.999997,   -0.0110795,
+           0.0,         0.0,         0.0,         1.0 ]
+
+#Multiple thread support
+multiple_thread: 1
+
+#feature tracker parameters
+max_cnt: 200
+min_dist: 25
+freq: 10
+F_threshold: 1.0
+show_track: 1
+flow_back: 1
+flow_back_threshold: 0.5
+
+#optimization parameters
+max_solver_time: 0.04
+max_num_iterations: 8
+keyframe_parallax: 5.0
+
+initialization:
+  relative_pose_min_parallax_px: 5.0
+  max_vins_init_failures: 8
+
+#imu parameters
+# Source: rising-turtle/VINS-Fusion struct_core_cal_v2/struct_core_mono.yaml
+# (values used by the VCU-RVI paper to drive VINS-Fusion evaluation).
+# BMI055 in SC; original Kalibr Allan-variance values are in IROS 2020 Table II.
+# IMU noise — kept identical to rising-turtle/VINS-Fusion struct_core_cal_v2.
+# Baseline divergence on dynamic sequences is expected (failure mode A, Sec. 5.6).
+acc_n: 0.2
+gyr_n: 0.02
+acc_w: 0.002
+gyr_w: 0.0002
+g_norm: 9.8
+imu_acc_scale: -9.80665  # VCU-RVI /imu is normalized (acc/9.8); rescale with sign flip (rising-turtle Issue #8)
+
+# DRT prior covariance — disabled in Baseline but retained for binary-compat.
+drt_prior:
+    pos_cov: 0.4
+    rot_cov: 0.09
+    vel_cov: 1.0
+    acc_bias_cov: 0.5
+    gyr_bias_cov: 0.1
+
+#unsynchronization parameters
+# VCU-RVI uses SC hardware-synchronized color/depth/IMU; estimate_td still on
+# for robustness against residual offset.
+estimate_td: 1
+td: 0.0
+
+#loop closure parameters
+load_previous_pose_graph: 0
+pose_graph_save_path: "/home/chen/full+drt/VINS-Orig/vcu_rvi/pose_graph/"
+save_image: 1
+
+# Dynamic Scene Detection Trigger — disabled in Baseline.
+dynamic_trigger:
+  enabled: 0
+  tracking_rate_threshold: 0.91
+  k_on_frames: 2
+  k_off_frames: 10
+
+# Module Control — all enhancement modules disabled for Baseline.
+module_control:
+    enable_dg_ransac: 0
+    enable_pre_filtering: 0
+    enable_post_verification: 0
+    enable_drt_fallback: 0
+
+# Depth Confidence Computation (inactive when DF is off, kept for binary compat).
+# NOTE on sigma_rate (sigma_0): the value 2.0 m/s was calibrated for D435i
+# at d=5m. Structure Core depth range is 0.3-5m (vs D435i 0.3-10m), typical
+# working distance is closer (~3m), so the synthesized depth-differencing +
+# gyroscope noise is roughly 2.6-3 m/s, suggesting sigma_0 in [1.3, 1.7] m/s
+# for VCU-RVI. The Baseline does not use this value; it matters only in
+# ours_nodrt / ours_full where it should be revisited together with the
+# sensor-aware sigma_0 sensitivity scan reported in Section 5.2 of the paper.
+depth_confidence:
+    sigma_relative: 0.12
+    sigma_rate: 2.0
+    lambda_depth: 0.005
+    lambda_fov: 0.15
+    min_threshold: 0.2
+    high_threshold: 0.50
+    filter_size: 5
+
+post_verification:
+    enabled: 0
+    suspicious_threshold: 0.65
+    max_verify_count: 20
+
+# Depth verification — depth_max_range tightened to 6.0m (SC effective range
+# is 0.3-5m; D435i used 35m to handle Market long-range depth which does not
+# apply here).
+depth_verification:
+    depth_min_range: 0.3
+    depth_max_range: 6.0
+    min_depth_samples: 2
+    depth_rate_tolerance_sigma: 3.0
+    depth_noise_std: 0.02
+
+dg_ransac:
+    enabled: 0
+    local_window_size: 15
+    filter_kernel: 7
+    high_conf_filter_threshold: 0.50
+    min_points_for_ransac: 8
+    fallback_enabled: 1
+    epipolar_threshold: 1.0
+    depth_error_threshold: 0.2
+    min_iterations: 50
+    max_iterations: 300
+    adaptive_iterations: 1
+    early_termination_ratio: 0.8
+
+# Logging Configuration
+logging:
+    enable_detailed_log: 1
+    log_interval: 100
+    log_trigger_events: 1
+    log_statistics: 1
+    log_performance: 1
+    log_depth_preprocess: 1
+    log_confidence_compute: 1
+    log_ransac_details: 1
+    log_depth_motion: 1

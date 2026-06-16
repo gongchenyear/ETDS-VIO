@@ -1,0 +1,144 @@
+%YAML:1.0
+---
+# Full-NoPre ablation:
+# keep trigger + DG-RANSAC + Post + DRT enabled, but disable Pre filtering.
+# Based on market_mono_imu_ours_full.yaml to evaluate the final system without Module 2.
+
+#common parameters
+#support: 1 imu 1 cam; 1 imu 2 cam: 2 cam;
+imu: 1
+num_of_cam: 1
+
+# Topics from OpenLORIS Market bag (D435i data under /d400 namespace)
+imu_topic: "/d400/imu0"
+image0_topic: "/d400/color/image_raw"
+depth0_topic: "/d400/aligned_depth_to_color/image_raw"
+
+# Output path for VINS results
+output_path: "/home/chen/full+drt/NoPre/"
+
+# Camera calibration
+cam0_calib: "d400_color_calib.yaml"
+image_width: 848
+image_height: 480
+
+# Extrinsic parameter between IMU and Camera.
+estimate_extrinsic: 0
+body_T_cam0: !!opencv-matrix
+   rows: 4
+   cols: 4
+   dt: d
+   data: [1.0, 0.0, 0.0, 0.0,
+          0.0, 1.0, 0.0, 0.0,
+          0.0, 0.0, 1.0, 0.0,
+          0.0, 0.0, 0.0, 1.0]
+
+#Multiple thread support
+multiple_thread: 1
+
+#feature traker paprameters
+max_cnt: 200
+min_dist: 25
+freq: 10
+F_threshold: 1.0
+show_track: 1
+flow_back: 1
+flow_back_threshold: 0.5
+
+#optimization parameters
+max_solver_time: 0.04
+max_num_iterations: 8
+keyframe_parallax: 3.0
+
+initialization:
+    relative_pose_min_parallax_px: 3.0
+    max_vins_init_failures: 8
+
+#imu parameters
+acc_n: 0.00103
+gyr_n: 0.00016
+acc_w: 0.001
+gyr_w: 0.0001
+g_norm: 9.81007
+
+# DRT Initialization Prior Covariance
+drt_prior:
+    pos_cov: 0.4
+    rot_cov: 0.09
+    vel_cov: 1.0
+    acc_bias_cov: 0.5
+    gyr_bias_cov: 0.1
+
+#unsynchronization parameters
+estimate_td: 1
+td: 0.0
+
+#loop closure parameters
+load_previous_pose_graph: 0
+pose_graph_save_path: "/home/chen/full+drt/Ours-Full-NoPre/"
+save_image: 1
+
+# Dynamic Scene Detection Trigger
+dynamic_trigger:
+    enabled: 1
+    tracking_rate_threshold: 0.91
+    k_on_frames: 2
+    k_off_frames: 10
+
+# Module Control
+module_control:
+    enable_dg_ransac: 1
+    enable_pre_filtering: 0           # Full-NoPre ablation
+    enable_post_verification: 1
+    enable_drt_fallback: 1
+
+# Depth Confidence Computation
+depth_confidence:
+    sigma_relative: 0.12
+    sigma_rate: 2.0
+    lambda_depth: 0.005
+    lambda_fov: 0.15
+    min_threshold: 0.2
+    high_threshold: 0.30
+    filter_size: 5
+
+# Module 3: Post-Verification
+post_verification:
+    enabled: 1
+    suspicious_threshold: 0.65
+    max_verify_count: 20
+
+# Depth Verification
+depth_verification:
+    depth_min_range: 0.3
+    depth_max_range: 35.0
+    min_depth_samples: 2
+    depth_rate_tolerance_sigma: 3.0
+    depth_noise_std: 0.02
+
+# Module 2: DG-RANSAC Configuration
+dg_ransac:
+    enabled: 1
+    local_window_size: 15
+    filter_kernel: 7
+    high_conf_filter_threshold: 0.30
+    min_points_for_ransac: 8
+    fallback_enabled: 1
+    epipolar_threshold: 1.5
+    depth_error_threshold: 0.30
+    min_iterations: 50
+    max_iterations: 300
+    adaptive_iterations: 1
+    early_termination_ratio: 0.8
+
+# Logging Configuration
+logging:
+    enable_detailed_log: 1
+    log_interval: 100
+    log_trigger_events: 1
+    log_statistics: 1
+    log_performance: 1
+    log_depth_preprocess: 1
+    log_confidence_compute: 1
+    log_ransac_details: 1
+    log_depth_motion: 1

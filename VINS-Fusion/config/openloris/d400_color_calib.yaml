@@ -1,0 +1,23 @@
+%YAML:1.0
+
+# Camera calibration parameters derived from /d400/color/camera_info topic
+
+model_type: PINHOLE
+camera_name: d400_color
+image_width: 848
+image_height: 480
+
+# Distortion parameters (k1, k2, p1, p2, k3)
+distortion_parameters:
+   k1: 0.0
+   k2: 0.0
+   p1: 0.0
+   p2: 0.0
+#   k3: 0.0 # k3 is often omitted if zero
+
+# Projection parameters (fx, fy, cx, cy)
+projection_parameters:
+   fx: 616.802734375
+   fy: 616.7510375976562
+   cx: 435.0341796875
+   cy: 242.90113830566406 

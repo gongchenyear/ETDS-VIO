@@ -1,0 +1,152 @@
+%YAML:1.0
+---
+#common parameters
+#support: 1 imu 1 cam; 1 imu 2 cam: 2 cam;
+imu: 1
+num_of_cam: 1
+
+# Topics from OpenLORIS Market bag (D435i data under /d400 namespace)
+imu_topic: "/d400/imu0"             # Target topic for the merged IMU data
+image0_topic: "/d400/color/image_raw" # D435i color camera topic
+depth0_topic: "/d400/aligned_depth_to_color/image_raw" # D435i aligned depth topic (for Phase 3)
+# image1_topic: "/cam1/image_raw"    # Not used in mono mode
+
+# Output path for VINS results
+output_path: "/home/chen/full+drt/Ours-NoDRT/" # Please change if needed
+
+# Camera calibration - Now using a dedicated file for loop_fusion compatibility
+# cam0_calib: "cam0_pinhole.yaml" # Read from /d400/color/camera_info topic
+cam0_calib: "d400_color_calib.yaml" # Use the file created from camera_info
+# cam1_calib: "cam1_pinhole.yaml" # Not used
+image_width: 848
+image_height: 480
+
+
+# Extrinsic parameter between IMU and Camera.
+estimate_extrinsic: 0   # 0: Trust extrinsic from /tf_static. 1: Optimize initial guess. 2: Estimate from scratch.
+# Provide a placeholder identity matrix for body_T_cam0, even if estimate_extrinsic is 0,
+# to prevent initialization errors. This should be overridden by /tf_static.
+body_T_cam0: !!opencv-matrix
+   rows: 4
+   cols: 4
+   dt: d
+   data: [1.0, 0.0, 0.0, 0.0,
+          0.0, 1.0, 0.0, 0.0,
+          0.0, 0.0, 1.0, 0.0,
+          0.0, 0.0, 0.0, 1.0]
+
+#Multiple thread support
+multiple_thread: 1
+
+#feature traker paprameters
+max_cnt: 200            # max feature number in feature tracking (Increased for Home1-1 churn)
+min_dist: 25            # min distance between two features (Decreased for denser packing)
+freq: 10                # frequence (Hz) of publish tracking result. At least 10Hz for good estimation. If set 0, the frequence will be same as raw image
+F_threshold: 1.0        # ransac threshold (pixel) - VINS默认配置
+show_track: 1           # publish tracking image as topic
+flow_back: 1            # perform forward and backward optical flow to improve feature tracking accuracy
+flow_back_threshold: 0.5 # forward-backward consistency threshold (pixel) - 恢复原始强度，保证阶段一不影响后端
+
+#optimization parameters
+max_solver_time: 0.04  # max solver itration time (ms), to guarantee real time
+max_num_iterations: 8   # max solver itrations, to guarantee real time
+keyframe_parallax: 3.0 # Reduced from 5.0 to help Cafe1-2 (low-motion) pass frame validation
+
+initialization:
+  relative_pose_min_parallax_px: 3.0 # Reduced from 5.0 to match keyframe_parallax for consistency with Ours-Full
+  max_vins_init_failures: 8          # Kept aligned with Ours-Full even though DRT fallback is disabled here
+
+#imu parameters       The more accurate parameters you provide, the better performance
+# Values estimated from OpenLORIS D435i variance info and sampling rates (Accel: 250Hz, Gyro: 400Hz)
+acc_n: 0.00103        # accelerometer noise density (sqrt(0.0002678 / 250))
+gyr_n: 0.00016        # gyroscope noise density (sqrt(1.0296e-5 / 400))
+# Using template values for bias random walk, refine later if needed
+acc_w: 0.001          # accelerometer bias random work noise standard deviation.
+gyr_w: 0.0001         # gyroscope bias random work noise standard deviation.
+g_norm: 9.81007       # gravity magnitude
+
+# DRT Initialization Prior Covariance (Relaxed for robustness, tighten for accuracy)
+drt_prior:
+    pos_cov: 0.4
+    rot_cov: 0.09       # Rotation uncertainty (rad). Default 0.2 (~11 deg). Tighten to 0.05 (~3 deg) for better gravity alignment.
+    vel_cov: 1.0        # Velocity uncertainty (m/s). Default 1.0.
+    acc_bias_cov: 0.5   # Accel bias uncertainty (m/s^2). Aligned with Ours-Full
+    gyr_bias_cov: 0.1   # Gyro bias uncertainty (rad/s). Aligned with Ours-Full
+
+#unsynchronization parameters
+estimate_td: 1        # online estimate time offset between camera and imu (recommended for robustness)
+td: 0.0               # initial value of time offset. unit: s.
+
+#loop closure parameters
+load_previous_pose_graph: 0        # load and reuse previous pose graph; load from 'pose_graph_save_path'
+pose_graph_save_path: "/home/chen/full+drt/Ours-NoDRT/" # save and load path
+save_image: 1                   # save image in pose graph for visualization prupose; you can close this function by setting 0
+
+
+
+# Dynamic Scene Detection Trigger
+dynamic_trigger:
+  enabled: 1                        # 0: disable, 1: enable
+  tracking_rate_threshold: 0.91      # Aligned with Ours-Full baseline
+  k_on_frames: 2                    # Require two consecutive low-rate frames to avoid single-frame dips
+  k_off_frames: 10                  # Conservative deactivation to retain the full degraded segment
+
+
+
+# Module Control
+module_control:
+    enable_dg_ransac: 1               # DG-RANSAC main switch
+    enable_pre_filtering: 1           # Module 2: Pre-RANSAC depth-guided filtering
+    enable_post_verification: 1       # Module 3: Post-RANSAC depth verification
+    enable_drt_fallback: 0            # Ours-NoDRT: keep DRT disabled while matching Ours-Full frontend settings
+
+# Depth Confidence Computation
+depth_confidence:
+    sigma_relative: 0.12              # Relative change std (12%)
+    sigma_rate: 2.0                   # Depth rate std (m/s) - 已验证最优
+    lambda_depth: 0.005               # Depth-adaptive residual scale coefficient
+    lambda_fov: 0.15                  # FOV-position adaptive residual scale coefficient
+    min_threshold: 0.2                # Low confidence threshold
+    high_threshold: 0.30              # Aligned with Ours-Full baseline
+    filter_size: 5                    # Median filter size (5x5)
+
+# Module 3: Post-Verification
+post_verification:
+    enabled: 1
+    suspicious_threshold: 0.65
+    max_verify_count: 20
+
+# Depth Verification (深度范围参数)
+depth_verification:
+    depth_min_range: 0.3              # 最小深度
+    depth_max_range: 35.0             # 增加到35m，覆盖market1-3场景的远距离深度（可能包含噪声）
+    min_depth_samples: 2
+    depth_rate_tolerance_sigma: 3.0   # Aligned with Ours-Full baseline
+    depth_noise_std: 0.02
+
+# Module 2: DG-RANSAC Configuration
+dg_ransac:
+    enabled: 1
+    local_window_size: 15
+    filter_kernel: 7
+    high_conf_filter_threshold: 0.30  # Aligned with Ours-Full baseline
+    min_points_for_ransac: 8
+    fallback_enabled: 1
+    epipolar_threshold: 1.5           # Aligned with Ours-Full baseline
+    depth_error_threshold: 0.30       # Aligned with Ours-Full baseline
+    min_iterations: 50
+    max_iterations: 300
+    adaptive_iterations: 1
+    early_termination_ratio: 0.8
+
+# Logging Configuration
+logging:
+    enable_detailed_log: 1
+    log_interval: 100
+    log_trigger_events: 1
+    log_statistics: 1
+    log_performance: 1
+    log_depth_preprocess: 1
+    log_confidence_compute: 1
+    log_ransac_details: 1
+    log_depth_motion: 1

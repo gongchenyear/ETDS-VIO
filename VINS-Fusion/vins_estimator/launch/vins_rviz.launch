@@ -1,0 +1,3 @@
+<launch>
+    <node name="rvizvisualisation_drt_dyn" pkg="rviz" type="rviz" output="log" args="-d $(find vins_drt_dyn)/../config/vins_rviz_config.rviz" />
+</launch>
