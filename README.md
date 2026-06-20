@@ -1,9 +1,9 @@
 # ETDS-VIO
 
-This directory is the release scope referenced by the manuscript for
+This directory contains the code release scope referenced by the manuscript
 `ETDS-VIO: a sensor-uncertainty-aware dual-screening visual--inertial odometry for robust pose measurement in dynamic environments`.
 
-The public code release is limited to `src/VINS-Fusion`. Other local workspace directories used during experimentation are not part of the repository release.
+The public code release is limited to `src/VINS-Fusion`. Other local workspace directories used during experimentation are not part of the released repository.
 
 ## What Is in `src/VINS-Fusion`
 
@@ -65,7 +65,7 @@ The most complete OpenLORIS configuration is `VINS-Fusion/config/openloris/marke
 
 ## Build Notes
 
-This source tree is intended to live inside a catkin workspace.
+This source tree is intended to be used inside a catkin workspace.
 
 The build files still contain machine-local dependency paths inherited from the development environment. Before building on another machine, update those paths to match the local installation:
 
